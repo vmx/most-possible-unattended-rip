@@ -10,6 +10,29 @@ OUTPUT_DIR="$HOME/rip"
 
 # ============
 
+get_cover_art() {
+    local RELEASES=$(tr '\015' "\n" < "${LOG_FILE}" | grep "Release")
+
+    local COUNTER=0
+    # From https://www.linuxquestions.org/questions/programming-9/multi-line-return-from-grep-into-an-array-333576/#post1694951
+    # (2018-02-09)
+    local IFS=$'\n'
+    # There might be more than one disk that matches, get the cover art
+    # from all of them
+    for RELEASE in ${RELEASES}; do
+        # remove the search pattern
+        local MBID=${RELEASE/Release : /}
+
+        if [ "${COUNTER}" -eq "0" ]; then
+            wget -O cover.jpg "https://coverartarchive.org/release/${MBID}/front"
+        else
+            wget -O cover.${COUNTER}.jpg "https://coverartarchive.org/release/${MBID}/front"
+        fi
+
+        COUNTER=$((${COUNTER} + 1))
+    done
+}
+
 LOG_FILE="$LOG_DIR/rip-$(date +%Y-%m-%dT%H-%M-%S).log"
 
 # end previous shutdown if one is active
@@ -38,28 +61,8 @@ echo "# auto rip finished" | tee -a "$LOG_FILE"
 
 # grab the cover art
 if [ $SC == 0 ]; then
-    # replace the carriage returns with proper line breaks and search for the output pattern
-    FOLDER_LINE=$(tr '\015' "\n" < "${LOG_FILE}" | grep "utput directory")
-    echo "# folder line: $FOLDER_LINE" >> "${LOG_FILE}"
-
-    if [ "$FOLDER_LINE" == "" ]; then
-        echo "# result: success (but couldn't find output folder for fetching cover art)" | tee -a "$LOG_FILE"
-    else
-        # remove the search pattern
-        FOLDER=${FOLDER_LINE/Creating output directory /}
-        echo "# output path: $FOLDER" >> "${LOG_FILE}"
-
-        # if you have beets then grab image with beets
-        # can be removed once this is closed: https://github.com/JoeLametta/whipper/issues/50
-        if type beet >/dev/null 2>&1; then
-            # -l: discard all additions to the library
-            # -c: path to the config file
-            # import: normally you import the file here and grab the cover alongside
-            # -q: quiet - don't ask for user input. Either it works or forget about it
-            beet -l /dev/null -c "$HOME/.config/beets/config.albums-cover.yaml" import -q "$FOLDER" >> "${LOG_FILE}"
-            echo "# result: success" | tee -a "$LOG_FILE"
-        fi
-    fi
+    get_cover_art
+    echo "# result: success with getting cover art" | tee -a "$LOG_FILE"
 else
     echo "# result: no success with whipper/morituri: status code = ${SC}" | tee -a "$LOG_FILE"
     
