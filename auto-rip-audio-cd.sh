@@ -32,9 +32,9 @@ get_cover_art() {
             local MBID=${RELEASE/Release : /}
 
             if [ "${COUNTER}" -eq "0" ]; then
-                wget -O "${FOLDER}/cover.jpg" "https://coverartarchive.org/release/${MBID}/front"
+                wget -O "${FOLDER}/cover.jpg" "https://coverartarchive.org/release/${MBID}/front" >>"${LOG_FILE}" 2>&1
             else
-                wget -O "${FOLDER}/cover.${COUNTER}.jpg" "https://coverartarchive.org/release/${MBID}/front"
+                wget -O "${FOLDER}/cover.${COUNTER}.jpg" "https://coverartarchive.org/release/${MBID}/front" >>"${LOG_FILE}" 2>&1
             fi
 
             COUNTER=$((${COUNTER} + 1))
