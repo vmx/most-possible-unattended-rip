@@ -11,26 +11,35 @@ OUTPUT_DIR="$HOME/rip"
 # ============
 
 get_cover_art() {
-    local RELEASES=$(tr '\015' "\n" < "${LOG_FILE}" | grep "Release")
-
-    local COUNTER=0
-    # From https://www.linuxquestions.org/questions/programming-9/multi-line-return-from-grep-into-an-array-333576/#post1694951
-    # (2018-02-09)
-    local IFS=$'\n'
-    # There might be more than one disk that matches, get the cover art
-    # from all of them
-    for RELEASE in ${RELEASES}; do
+    # replace the carriage returns with proper line breaks and search for the output pattern
+    local FOLDER_LINE=$(tr '\015' "\n" < "${LOG_FILE}" | grep "utput directory")
+    if [ "$FOLDER_LINE" == "" ]; then
+        echo "# result: success (but couldn't find output folder for fetching cover art)" | tee -a "$LOG_FILE"
+    else
         # remove the search pattern
-        local MBID=${RELEASE/Release : /}
+        FOLDER=${FOLDER_LINE/creating output directory /}
 
-        if [ "${COUNTER}" -eq "0" ]; then
-            wget -O cover.jpg "https://coverartarchive.org/release/${MBID}/front"
-        else
-            wget -O cover.${COUNTER}.jpg "https://coverartarchive.org/release/${MBID}/front"
-        fi
+        local RELEASES=$(tr '\015' "\n" < "${LOG_FILE}" | grep "Release")
 
-        COUNTER=$((${COUNTER} + 1))
-    done
+        local COUNTER=0
+        # From https://www.linuxquestions.org/questions/programming-9/multi-line-return-from-grep-into-an-array-333576/#post1694951
+        # (2018-02-09)
+        local IFS=$'\n'
+        # There might be more than one disk that matches, get the cover art
+        # from all of them
+        for RELEASE in ${RELEASES}; do
+            # remove the search pattern
+            local MBID=${RELEASE/Release : /}
+
+            if [ "${COUNTER}" -eq "0" ]; then
+                wget -O "${FOLDER}/cover.jpg" "https://coverartarchive.org/release/${MBID}/front"
+            else
+                wget -O "${FOLDER}/cover.${COUNTER}.jpg" "https://coverartarchive.org/release/${MBID}/front"
+            fi
+
+            COUNTER=$((${COUNTER} + 1))
+        done
+    fi
 }
 
 LOG_FILE="$LOG_DIR/rip-$(date +%Y-%m-%dT%H-%M-%S).log"
